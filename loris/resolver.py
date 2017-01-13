@@ -11,6 +11,7 @@ from os.path import dirname
 from shutil import copy
 from urllib import unquote, quote_plus
 from contextlib import closing
+from collections import defaultdict
 
 import constants
 import hashlib
@@ -525,3 +526,131 @@ class SourceImageCachingResolver(_AbstractResolver):
         format = self.format_from_ident(ident)
         logger.debug('Source format %s' % (format,))
         return (cache_fp, format)
+
+"""
+Resolves IWM's collection object and media ID's.
+
+Identifier format:
+object-12345/media-12345/large
+object-98765432/media-987654/mid
+"""
+class IwmFSResolver(SimpleFSResolver):
+    def __init__(self, config):
+        super(SimpleFSResolver, self).__init__(config)
+        if 'src_img_roots' in self.config:
+            self.source_roots = self.config['src_img_roots']
+        else:
+            self.source_roots = [self.config['src_img_root']]
+
+    """
+    Raises 404 exception if the identifier is
+    not resolvable
+
+    @param self IwmFSResolver
+    @param ident string
+    """
+    def raise_404_for_ident(self, ident):
+        message = 'Source image not found for identifier: %s.' % (ident,)
+        logger.warn(message)
+        raise ResolverException(404, message)
+
+    """
+    Parses the json value and returns the path
+    to the media file
+
+    @param self IwmFSResolver
+    @param json_val list
+    @param image_size_id string
+    @param media_id string
+
+    @return string | None
+    """
+    def parse_json_val(self, json_val, image_size_id, media_id):
+        num_found = json_val['response']['numFound']
+
+        if num_found > 0:
+            docs = json_val['response']['docs']
+            media_location = defaultdict(list)
+
+            for el in docs:
+                media_reference = el['mediaReference']
+                media_locations = el[image_size_id]
+
+                for counter, reference in enumerate(media_reference):
+                    if reference == media_id:
+                        return media_locations[counter]
+        else:
+            return None
+
+    """
+    Checks whether an identifier is resolvable or not.
+
+    @param self IwmFSResolver
+    @param ident string
+
+    @return bool
+    """
+    def is_resolvable(self, ident):
+        return not self.source_file_path(ident) is None
+
+    """
+    Returns the file extension using string
+    manipulation
+
+    @param self IwmFSResolver
+    @param source_fp string
+
+    @return string
+    """
+    def format_from_source_fp(self, source_fp):
+        return source_fp.split('.')[-1]
+
+    """
+    Queries the SOLR server and returns
+    the file path for a given identifier
+
+    @param self IwmFSResolver
+    @param ident string
+
+    @return string
+    """
+    def source_file_path(self, ident):
+        # URL decode the identifier
+        ident = unquote(ident) # = object-123456/media-654321/large
+
+        # Split the ident string by forward slashes
+        # This should have 3 values
+        object_id, media_id, size = ident.split('/')
+
+        image_size_id = size+'MediaLocation'
+        request_url = 'http://192.168.100.112:28080/solr-4.10.0/iwm-new/select/'
+        data = {'q':'identifier:'+object_id+' AND mediaReference:'+media_id, 'fl':image_size_id+',mediaReference', 'wt':'json'}
+
+        r = requests.get(request_url, params=data)
+
+        fpath = self.parse_json_val(r.json(), image_size_id, media_id)
+
+        if not fpath is None:
+            for directory in self.source_roots:
+                fp = join(directory, fpath)
+                if exists(fp):
+                    return fp
+
+    """
+    Main method of this class which gets
+    called from outside
+
+    @param self IwmFSResolver
+    @param ident string
+
+    @return tuple
+    """
+    def resolve(self, ident):
+        # ident = object-123456/media-654321/large
+        if not self.is_resolvable(ident):
+            self.raise_404_for_ident(ident)
+
+        source_fp = self.source_file_path(ident)
+        format = self.format_from_source_fp(source_fp)
+
+        return (source_fp, format)

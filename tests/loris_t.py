@@ -98,6 +98,10 @@ class LorisTest(unittest.TestCase):
         self.test_altpng2_fp = path.join(self.test_img_dir,self.test_altpng2_id)
         self.test_altpng2_rotate = '45'
 
+        self.test_iwmfsresolver_id = 'object-205224313/media-301918/large'
+        self.test_iwmfsresolver_fp = path.join(self.test_img_dir, '301', '918', 'large_000000.jpg')
+
+
         self.test_jp2_with_embedded_profile_id = '47102787.jp2'
         self.test_jp2_with_embedded_profile_fp = path.join(self.test_img_dir,self.test_jp2_with_embedded_profile_id)
         self.test_jp2_embedded_profile_copy_fp = path.join(test_icc_dir,'profile.icc')

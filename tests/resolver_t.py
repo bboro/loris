@@ -2,12 +2,16 @@
 from loris.loris_exception import ResolverException
 from loris.resolver import SimpleHTTPResolver, TemplateHTTPResolver
 from loris.resolver import SourceImageCachingResolver, SimpleFSResolver
+from loris.resolver import IwmFSResolver
 from os.path import dirname
 from os.path import isfile
 from os.path import join
 from os.path import realpath
 from os.path import exists
 from urllib import unquote, quote_plus
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 import loris_t
 import responses
@@ -297,6 +301,22 @@ class Test_TemplateHTTPResolver(loris_t.LorisTest):
         self.assertEqual(None,
             self.app.resolver._web_request_url('unknown:id2')[0])
 
+class Test_IwmFSResolver(loris_t.LorisTest):
+    'Test IwmFSResolver'
+
+    def test_iwm_fs_resolver(self):
+
+        config = {
+            'src_img_roots' : [self.test_img_dir]
+        }
+        self.app.resolver = IwmFSResolver(config)
+        expected_path = self.test_iwmfsresolver_fp
+
+        resolved_path, fmt = self.app.resolver.resolve(self.test_iwmfsresolver_id)
+        self.assertEqual(expected_path, resolved_path)
+        self.assertEqual(fmt, 'jpg')
+        self.assertTrue(isfile(resolved_path))
+
 
 def suite():
     import unittest
@@ -305,5 +325,6 @@ def suite():
     test_suites.append(unittest.makeSuite(Test_SourceImageCachingResolver, 'test'))
     test_suites.append(unittest.makeSuite(Test_SimpleHTTPResolver, 'test'))
     test_suites.append(unittest.makeSuite(Test_TemplateHTTPResolver, 'test'))
+    test_suites.append(unittest.makeSuite(Test_IwmFSResolver, 'test'))
     test_suite = unittest.TestSuite(test_suites)
     return test_suite
