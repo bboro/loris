@@ -594,7 +594,7 @@ class IwmFSResolver(SimpleFSResolver):
         object_id, media_id, size = ident.split('/')
 
         image_size_id = size+'MediaLocation'
-        request_url = 'http://192.168.100.112:28080/solr-4.10.0/iwm-new/select/'
+        request_url = self.config['ciim_url']
         data = {'q':'identifier:'+object_id+' AND mediaReference:'+media_id, 'fl':image_size_id+',mediaReference', 'wt':'json'}
 
         r = requests.get(request_url, params=data)
