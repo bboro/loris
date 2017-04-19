@@ -1,3 +1,9 @@
+WARNING: This is NOT the official Loris Image Server Repository
+=============================================================================
+
+This repo is a fork of the official one, and is most likely not going to work for you.
+You can find the official Loris Image Server repo here: [https://github.com/loris-imageserver/loris](https://github.com/loris-imageserver/loris)
+
 ![loris icon](www/icons/loris-circle-small.png?raw=true) Loris IIIF Image Server
 =============================================================================
 
